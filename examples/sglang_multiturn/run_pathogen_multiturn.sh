@@ -1,14 +1,17 @@
-# run on 8xH100
+#!/bin/bash
 # make sure your current working directory is the root of the project
 
 set -x
+
+# Load environment variables from .env file
+source .env
 
 ulimit -n 65535
 
 PROJECT_DIR="$(pwd)"
 CONFIG_PATH="$PROJECT_DIR/examples/sglang_multiturn/config"
-TRAIN_BATCH_SIZE=${TRAIN_BATCH_SIZE:-512}
-MICRO_BATCH_SIZE=${MICRO_BATCH_SIZE:-8}
+TRAIN_BATCH_SIZE=${TRAIN_BATCH_SIZE:-128}
+MICRO_BATCH_SIZE=${MICRO_BATCH_SIZE:-16}
 OFFLOAD=${OFFLOAD:-False}
 
 python3 -m verl.trainer.main_ppo \
@@ -21,7 +24,7 @@ python3 -m verl.trainer.main_ppo \
     data.filter_overlong_prompts=True \
     data.truncation='error' \
     data.return_raw_chat=True \
-    actor_rollout_ref.model.path=Qwen/Qwen2.5-0.5B-Instruct \
+    actor_rollout_ref.model.path=/local_data/group_dir/huggingface/arena_sft_8B_v1 \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \
     +actor_rollout_ref.model.enable_activation_offloading=True \
@@ -34,7 +37,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.actor.entropy_coeff=0 \
     actor_rollout_ref.actor.fsdp_config.param_offload=$OFFLOAD \
     actor_rollout_ref.actor.fsdp_config.optimizer_offload=$OFFLOAD \
-    actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16 \
+    +actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16 \
     actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=$MICRO_BATCH_SIZE \
     actor_rollout_ref.rollout.tensor_model_parallel_size=2 \
     actor_rollout_ref.rollout.name=sglang \
@@ -45,14 +48,15 @@ python3 -m verl.trainer.main_ppo \
     algorithm.use_kl_in_reward=False \
     trainer.critic_warmup=0 \
     trainer.logger='["console"]' \
-    trainer.project_name='gsm8k_async_rl' \
-    trainer.experiment_name='qwen2.5-0.5b_function_rm-gsm8k-sgl-multi-w-interaction-n8' \
+    trainer.project_name='pathogen_async_rl' \
+    trainer.experiment_name='arena_sft_8b_v1_function_rm-pathogen-sgl-multi-w-interaction-n8' \
     trainer.n_gpus_per_node=8 \
     trainer.nnodes=1 \
     trainer.save_freq=-1 \
-    trainer.test_freq=20 \
-    data.train_files=$HOME/data/gsm8k_verl_sgl_multi_turn_w_interaction/train.parquet \
-    data.val_files=$HOME/data/gsm8k_verl_sgl_multi_turn_w_interaction/test.parquet \
-    actor_rollout_ref.rollout.multi_turn.interaction_config_path="$PROJECT_DIR/examples/sglang_multiturn/config/interaction_config/gsm8k_interaction_config.yaml" \
-    trainer.total_epochs=15 $@
+    trainer.test_freq=-1 \
+    data.train_files=$HOME/data/pathogen/train.parquet \
+    data.val_files=$HOME/data/pathogen/test.parquet \
+    actor_rollout_ref.rollout.multi_turn.interaction_config_path="$PROJECT_DIR/examples/sglang_multiturn/config/interaction_config/pathogen_interaction_config.yaml" \
+    actor_rollout_ref.rollout.multi_turn.max_user_turns=3 \
+    trainer.total_epochs=1 $@
 

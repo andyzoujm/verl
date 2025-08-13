@@ -118,11 +118,21 @@ class ResourcePoolManager:
 
     def _check_resource_available(self):
         """Check if the resource pool can be satisfied in this ray cluster."""
-        node_available_resources = ray.state.available_resources_per_node()
-        node_available_gpus = {
-            node: node_info.get("GPU", 0) if "GPU" in node_info else node_info.get("NPU", 0)
-            for node, node_info in node_available_resources.items()
-        }
+        # Use the newer Ray API to avoid deprecation warning
+        try:
+            # Try the newer API first
+            node_available_resources = ray.get_runtime_context().get_resource_usage()
+            node_available_gpus = {}
+            for node_id, resources in node_available_resources.items():
+                gpu_count = resources.get("GPU", 0) if "GPU" in resources else resources.get("NPU", 0)
+                node_available_gpus[node_id] = gpu_count
+        except AttributeError:
+            # Fallback to the deprecated API if newer API is not available
+            node_available_resources = ray.state.available_resources_per_node()
+            node_available_gpus = {
+                node: node_info.get("GPU", 0) if "GPU" in node_info else node_info.get("NPU", 0)
+                for node, node_info in node_available_resources.items()
+            }
 
         # check total required gpus can be satisfied
         total_available_gpus = sum(node_available_gpus.values())

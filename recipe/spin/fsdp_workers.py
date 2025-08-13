@@ -370,6 +370,10 @@ class RewardModelWorker(Worker):
                 trust_remote_code=trust_remote_code,
             )
 
+            # Ensure model is on GPU when using Flash Attention
+            if torch.cuda.is_available():
+                reward_module = reward_module.to('cuda')
+
             if config.model.get("use_remove_padding", False) or self.ulysses_sequence_parallel_size > 1:
                 from verl.models.transformers.monkey_patch import apply_monkey_patch
 

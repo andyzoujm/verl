@@ -79,6 +79,10 @@ class NaiveRewardManager:
             extra_info = data_item.non_tensor_batch.get("extra_info", {})
             num_turns = data_item.non_tensor_batch.get("__num_turns__", None)
             extra_info["num_turns"] = num_turns
+            
+            # For pathogen scoring, include the prompt as attack_prompt
+            if data_source == "10_bio":
+                extra_info["attack_prompt"] = prompt_str
 
             score = self.compute_score(
                 data_source=data_source,
@@ -95,7 +99,21 @@ class NaiveRewardManager:
             else:
                 reward = score
 
-            reward_tensor[i, valid_response_length - 1] = reward
+            # OPTIONAL: Use turn-level rewards if available
+            interaction_rewards = data_item.non_tensor_batch.get("reward_scores", {})
+            turn_rewards = interaction_rewards.get("user_turn_rewards", []) if isinstance(interaction_rewards, dict) else []
+            
+            if len(turn_rewards) > 1 and False: # turn rewards are not used for now
+                # Multi-turn: distribute turn rewards + final reward
+                for turn_idx in range(len(turn_rewards) - 1):  # Exclude final turn
+                    pos = int((turn_idx + 1) * valid_response_length / len(turn_rewards))
+                    pos = min(pos, valid_response_length - 2)
+                    reward_tensor[i, pos] = turn_rewards[turn_idx] * 0.3  # Weight for turn rewards
+                # Final reward on last token
+                reward_tensor[i, valid_response_length - 1] = reward
+            else:
+                # Single turn: just use final reward
+                reward_tensor[i, valid_response_length - 1] = reward
 
             if data_source not in already_print_data_sources:
                 already_print_data_sources[data_source] = 0

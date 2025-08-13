@@ -58,6 +58,15 @@ class Message(BaseModel):
     content: str | dict[str, Any] | list[dict[str, Any]]
     tool_calls: Optional[list[OpenAIFunctionToolCall]] = None
 
+    def model_dump(self, **kwargs) -> dict[str, Any]:
+        """Override model_dump to remove empty tool_calls for chat template compatibility."""
+        result = super().model_dump(**kwargs)
+        # Remove tool_calls field if it's None or empty, as some chat templates expect 
+        # messages to either have no tool_calls field or exactly 1 tool call
+        if result.get("tool_calls") in [None, []]:
+            result.pop("tool_calls", None)
+        return result
+
 
 class AsyncRolloutRequestStateEnum(str, Enum):
     """The enum for async rollout request state."""

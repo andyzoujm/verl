@@ -13,6 +13,7 @@ pyarrow>=19.0.0
 pybind11
 pylatexenc
 pre-commit
+python-dotenv
 ray[default]
 tensordict>=0.8.0,<=0.9.1,!=0.9.0
 torchdata

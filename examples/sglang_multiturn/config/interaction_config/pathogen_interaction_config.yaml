@@ -1,0 +1,4 @@
+interaction:
+  - name: "pathogen"
+    class_name: "verl.interactions.pathogen_interaction.PathogenInteraction"
+    config: {}

@@ -631,6 +631,11 @@ def load_valuehead_model(local_path, torch_dtype, model_config, trust_remote_cod
             attn_implementation="flash_attention_2",
             trust_remote_code=trust_remote_code,
         )
+        # Ensure model is on GPU when using Flash Attention
+        if hasattr(model_config, 'attn_implementation') and model_config.attn_implementation == "flash_attention_2":
+            import torch
+            if torch.cuda.is_available():
+                model = model.to('cuda')
         return model
     except BaseException as e:
         if not is_trl_available():
@@ -653,6 +658,11 @@ def load_valuehead_model(local_path, torch_dtype, model_config, trust_remote_cod
         attn_implementation="flash_attention_2",
         trust_remote_code=trust_remote_code,
     )
+    # Ensure model is on GPU when using Flash Attention
+    if hasattr(model_config, 'attn_implementation') and model_config.attn_implementation == "flash_attention_2":
+        import torch
+        if torch.cuda.is_available():
+            ori_model = ori_model.to('cuda')
     model = AutoModelForCausalLMWithValueHead.from_pretrained(ori_model)
     patch_valuehead_model(model)
     return model

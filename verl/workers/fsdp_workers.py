@@ -1033,6 +1033,10 @@ class CriticWorker(Worker, DistProfilerExtension):
                 config.model.get("trust_remote_code", False),
             )
 
+            # Ensure model is on GPU when using Flash Attention
+            if torch.cuda.is_available():
+                critic_module = critic_module.to('cuda')
+
             use_remove_padding = config.model.get("use_remove_padding", False)
 
             apply_monkey_patch(
@@ -1379,6 +1383,10 @@ class RewardModelWorker(Worker, DistProfilerExtension):
                 attn_implementation="flash_attention_2",
                 trust_remote_code=trust_remote_code,
             )
+
+            # Ensure model is on GPU when using Flash Attention
+            if torch.cuda.is_available():
+                reward_module = reward_module.to('cuda')
 
             apply_monkey_patch(
                 model=reward_module,
